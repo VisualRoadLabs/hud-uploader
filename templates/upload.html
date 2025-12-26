@@ -6,6 +6,7 @@
   <title>Visual Road · Video Uploader</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/main.css') }}">
 </head>
+
 <body>
   <header class="topbar">
     <div class="container topbar__inner">
@@ -13,13 +14,10 @@
         <div class="brand__mark" aria-hidden="true"></div>
         <div class="brand__text">
           <div class="brand__name">Visual Road</div>
-          <div class="brand__subtitle">Local Video Uploader</div>
+          <div class="brand__subtitle">Video Uploader</div>
         </div>
       </div>
-
-      <div class="topbar__meta">
-        <span class="badge">Ingesta local</span>
-      </div>
+      <span class="badge">Upload directo + Job</span>
     </div>
   </header>
 
@@ -27,10 +25,10 @@
     <section class="card">
       <h1 class="h1">Subir vídeo</h1>
       <p class="muted">
-        Sube un vídeo para incorporarlo al repositorio y generar automáticamente imágenes y trazabilidad.
+        El vídeo se sube al servidor (autenticado) y se guarda temporalmente. Después se lanza un Job de procesamiento.
       </p>
 
-      <form method="post" enctype="multipart/form-data" class="form">
+      <form id="uploadForm" class="form">
         <div class="grid">
           <div class="field">
             <label for="source_type">Tipo de fuente</label>
@@ -39,58 +37,42 @@
               <option value="captured">Captured</option>
               <option value="simulated">Simulated</option>
             </select>
-            <div class="help">
-              Clasifica el origen del vídeo para organizarlo correctamente.
-            </div>
+            <div class="help">Define la categoría de origen para organizarlo correctamente.</div>
           </div>
 
           <div class="field">
             <label for="provider">Proveedor / Dataset (opcional)</label>
-            <input id="provider" name="provider" placeholder="Ej: nvidia, bdd100k, cam01..." />
-            <div class="help">
-              Etiqueta para agrupar contenido. Si lo dejas vacío, se usará <span class="code">unknown</span>.
-            </div>
+            <input id="provider" name="provider" placeholder="Ej: nvidia, cam01, bdd100k..." />
+            <div class="help">Etiqueta para agrupar contenido. Si lo dejas vacío, se usará <span class="code">unknown</span>.</div>
           </div>
         </div>
 
         <div class="field">
           <label for="video">Archivo de vídeo</label>
           <input id="video" type="file" name="video" accept="video/*" required />
-          <div class="help">
-            El sistema evita duplicados automáticamente y procesa el vídeo tras la subida.
-          </div>
+          <div class="help">Se procesará en segundo plano (Job).</div>
         </div>
 
         <div class="actions">
-          <button class="btn btn--primary" type="submit">Subir y procesar</button>
+          <button id="submitBtn" class="btn btn--primary" type="submit">Subir y procesar</button>
+          <span id="statusText" class="muted small" style="margin-left: 10px;"></span>
         </div>
       </form>
 
-      {% if message %}
-        <div class="notice notice--{{ level }}">
-          <div class="notice__title">{{ title }}</div>
-          <div class="notice__body">{{ message }}</div>
-          {% if details %}
-            <div class="notice__details">{{ details }}</div>
-          {% endif %}
-        </div>
-      {% endif %}
-    </section>
-
-    <section class="card card--secondary">
-      <h2 class="h2">Qué hace el proceso</h2>
-      <ul class="list">
-        <li>Organiza el vídeo por origen y proveedor.</li>
-        <li>Extrae imágenes de forma inteligente para reducir redundancia.</li>
-        <li>Registra metadatos y trazabilidad para análisis posterior.</li>
-      </ul>
+      <div id="notice" class="notice" style="display:none;">
+        <div id="noticeTitle" class="notice__title"></div>
+        <div id="noticeBody" class="notice__body"></div>
+      </div>
     </section>
   </main>
 
   <footer class="footer">
     <div class="container footer__inner">
-      <span class="muted small">© {{ year }} Visual Road · Herramienta interna</span>
+      <span class="muted small">© 2025 Visual Road</span>
     </div>
   </footer>
+
+  <script src="{{ url_for('static', filename='scripts/video_upload.js') }}"></script>
 </body>
 </html>
+
