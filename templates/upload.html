@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Visual Road · Video Uploader</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/main.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="container topbar__inner">
+      <div class="brand">
+        <div class="brand__mark" aria-hidden="true"></div>
+        <div class="brand__text">
+          <div class="brand__name">Visual Road</div>
+          <div class="brand__subtitle">Local Video Uploader</div>
+        </div>
+      </div>
+
+      <div class="topbar__meta">
+        <span class="badge">Ingesta local</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h1 class="h1">Subir vídeo</h1>
+      <p class="muted">
+        Sube un vídeo para incorporarlo al repositorio y generar automáticamente imágenes y trazabilidad.
+      </p>
+
+      <form method="post" enctype="multipart/form-data" class="form">
+        <div class="grid">
+          <div class="field">
+            <label for="source_type">Tipo de fuente</label>
+            <select id="source_type" name="source_type" required>
+              <option value="public">Public</option>
+              <option value="captured">Captured</option>
+              <option value="simulated">Simulated</option>
+            </select>
+            <div class="help">
+              Clasifica el origen del vídeo para organizarlo correctamente.
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="provider">Proveedor / Dataset (opcional)</label>
+            <input id="provider" name="provider" placeholder="Ej: nvidia, bdd100k, cam01..." />
+            <div class="help">
+              Etiqueta para agrupar contenido. Si lo dejas vacío, se usará <span class="code">unknown</span>.
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="video">Archivo de vídeo</label>
+          <input id="video" type="file" name="video" accept="video/*" required />
+          <div class="help">
+            El sistema evita duplicados automáticamente y procesa el vídeo tras la subida.
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn--primary" type="submit">Subir y procesar</button>
+        </div>
+      </form>
+
+      {% if message %}
+        <div class="notice notice--{{ level }}">
+          <div class="notice__title">{{ title }}</div>
+          <div class="notice__body">{{ message }}</div>
+          {% if details %}
+            <div class="notice__details">{{ details }}</div>
+          {% endif %}
+        </div>
+      {% endif %}
+    </section>
+
+    <section class="card card--secondary">
+      <h2 class="h2">Qué hace el proceso</h2>
+      <ul class="list">
+        <li>Organiza el vídeo por origen y proveedor.</li>
+        <li>Extrae imágenes de forma inteligente para reducir redundancia.</li>
+        <li>Registra metadatos y trazabilidad para análisis posterior.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer__inner">
+      <span class="muted small">© {{ year }} Visual Road · Herramienta interna</span>
+    </div>
+  </footer>
+</body>
+</html>
