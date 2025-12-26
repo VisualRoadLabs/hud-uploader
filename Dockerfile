@@ -1,4 +1,4 @@
-FROM python:3.13-slim
+FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
@@ -31,4 +31,4 @@ ENV PORT=8080
 EXPOSE 8080
 
 # Ejecuta la web
-CMD ["python", "-m", "app"]
+CMD ["gunicorn", "-b", "0.0.0.0:8080", "app:app", "--workers", "1", "--threads", "8", "--timeout", "0"]
