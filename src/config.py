@@ -33,6 +33,13 @@ class Settings:
     port: int
     debug: bool
 
+    # Cloud Run Job (manual trigger)
+    run_region: str
+    run_job_name: str
+
+    # GCS tmp staging
+    gcs_tmp_videos_prefix: str
+
 
 def _get_bool(name: str, default: bool) -> bool:
     v = os.environ.get(name)
@@ -62,4 +69,7 @@ def get_settings() -> Settings:
         host=os.environ.get("HOST", "127.0.0.1"),
         port=int(os.environ.get("PORT", "8000")),
         debug=_get_bool("DEBUG", True),
+        run_region=os.environ.get("RUN_REGION", "us-central1"),
+        run_job_name=os.environ.get("RUN_JOB_NAME", "hud-video-worker"),
+        gcs_tmp_videos_prefix=os.environ.get("GCS_TMP_VIDEOS_PREFIX", "tmp/videos"),
     )
