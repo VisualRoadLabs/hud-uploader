@@ -1,0 +1,17 @@
+# Ignore Roadiz tools and cache for
+# creating a docker image
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+.env
+.tmp_uploads/
+.git/
+.gitignore
+*.mp4
+*.mov
+*.mkv
+*.avi
+*.webm
