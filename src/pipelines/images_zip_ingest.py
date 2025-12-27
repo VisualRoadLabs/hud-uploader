@@ -53,7 +53,9 @@ def pick_output_ext(img: Image.Image, original_ext: str) -> str:
     return ".jpg"
 
 
-def gcs_image_object(source_type: str, dataset_name: str, job_ts: str, filename: str) -> str:
+def gcs_image_object(
+    source_type: str, dataset_name: str, job_ts: str, filename: str
+) -> str:
     return f"raw/images/{source_type}/{dataset_name}/{job_ts}/{filename}"
 
 

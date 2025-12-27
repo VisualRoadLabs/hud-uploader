@@ -51,7 +51,9 @@ def main() -> None:
             source_type=source_type,
             dataset_name=dataset_name,
         )
-        print(f"[OK] {res.message} inserted={res.nb_images_inserted} dup={res.nb_images_skipped_duplicates} invalid={res.nb_images_invalid}")
+        print(
+            f"[OK] {res.message} inserted={res.nb_images_inserted} dup={res.nb_images_skipped_duplicates} invalid={res.nb_images_invalid}"
+        )
     finally:
         # Borra staging tmp/zips
         try:
