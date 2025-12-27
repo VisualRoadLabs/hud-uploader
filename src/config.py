@@ -68,7 +68,7 @@ def get_settings() -> Settings:
         lineage_chunk_size=int(os.environ.get("LINEAGE_CHUNK_SIZE", "500")),
         images_chunk_size=int(os.environ.get("IMAGES_CHUNK_SIZE", "500")),
         host=os.environ.get("HOST", "127.0.0.1"),
-        port=int(os.environ.get("PORT", "8000")),
+        port=int(os.environ.get("PORT", "8080")),
         debug=_get_bool("DEBUG", True),
         run_region=os.environ.get("RUN_REGION", "us-central1"),
         run_job_name=os.environ.get("RUN_JOB_NAME", "hud-video-worker"),
