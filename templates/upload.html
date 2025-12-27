@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Visual Road · Video Uploader</title>
+  <title>Visual Road · HUD Uploader</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/main.css') }}">
 </head>
 
@@ -14,52 +14,126 @@
         <div class="brand__mark" aria-hidden="true"></div>
         <div class="brand__text">
           <div class="brand__name">Visual Road</div>
-          <div class="brand__subtitle">Video Uploader</div>
+          <div class="brand__subtitle">HUD Uploader</div>
         </div>
       </div>
-      <span class="badge">Upload directo + Job</span>
+      <span class="badge">Cloud Run Service + Jobs</span>
     </div>
   </header>
 
   <main class="container">
     <section class="card">
-      <h1 class="h1">Subir vídeo</h1>
+      <h1 class="h1">Ingesta de datos</h1>
       <p class="muted">
-        El vídeo se sube al servidor (autenticado) y se guarda temporalmente. Después se lanza un Job de procesamiento.
+        Selecciona el tipo de carga. El archivo se sube al servicio (autenticado) y se procesa en segundo plano con un Job.
       </p>
 
-      <form id="uploadForm" class="form">
-        <div class="grid">
-          <div class="field">
-            <label for="source_type">Tipo de fuente</label>
-            <select id="source_type" name="source_type" required>
-              <option value="public">Public</option>
-              <option value="captured">Captured</option>
-              <option value="simulated">Simulated</option>
-            </select>
-            <div class="help">Define la categoría de origen para organizarlo correctamente.</div>
+      <!-- Tabs -->
+      <div class="tabs" role="tablist" aria-label="Selección de carga" style="margin-top: 14px;">
+        <button
+          id="tabBtnVideo"
+          class="tab tab--active"
+          type="button"
+          role="tab"
+          aria-selected="true"
+          aria-controls="panelVideo"
+        >
+          Vídeos
+        </button>
+
+        <button
+          id="tabBtnZip"
+          class="tab"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          aria-controls="panelZip"
+        >
+          ZIP de imágenes
+        </button>
+      </div>
+
+      <!-- PANEL: VIDEO -->
+      <div id="panelVideo" class="tab-panel" role="tabpanel" aria-labelledby="tabBtnVideo" style="margin-top: 18px;">
+        <h2 class="h2">Subir vídeo</h2>
+        <p class="muted">
+          Se calcula el SHA-256 para evitar duplicados. Si es nuevo, se sube a <span class="code">tmp/videos</span> y se lanza el Job de vídeo.
+        </p>
+
+        <form id="uploadVideoForm" class="form">
+          <div class="grid">
+            <div class="field">
+              <label for="video_source_type">Tipo de fuente</label>
+              <select id="video_source_type" name="source_type" required>
+                <option value="public">Public</option>
+                <option value="captured">Captured</option>
+                <option value="simulated">Simulated</option>
+              </select>
+              <div class="help">Categoría de origen para organizar <span class="code">raw/videos</span> y <span class="code">raw/images</span>.</div>
+            </div>
+
+            <div class="field">
+              <label for="video_provider">Proveedor / Dataset (opcional)</label>
+              <input id="video_provider" name="provider" placeholder="Ej: nvidia, cam01, bdd100k..." />
+              <div class="help">Etiqueta de agrupación. Si lo dejas vacío, se usará <span class="code">unknown</span>.</div>
+            </div>
           </div>
 
           <div class="field">
-            <label for="provider">Proveedor / Dataset (opcional)</label>
-            <input id="provider" name="provider" placeholder="Ej: nvidia, cam01, bdd100k..." />
-            <div class="help">Etiqueta para agrupar contenido. Si lo dejas vacío, se usará <span class="code">unknown</span>.</div>
+            <label for="video_file">Archivo de vídeo</label>
+            <input id="video_file" type="file" name="video" accept="video/*" required />
+            <div class="help">El procesamiento pesado se ejecuta en segundo plano (Job).</div>
           </div>
-        </div>
 
-        <div class="field">
-          <label for="video">Archivo de vídeo</label>
-          <input id="video" type="file" name="video" accept="video/*" required />
-          <div class="help">Se procesará en segundo plano (Job).</div>
-        </div>
+          <div class="actions">
+            <button id="videoSubmitBtn" class="btn btn--primary" type="submit">Subir vídeo</button>
+            <span id="videoStatusText" class="muted small" style="margin-left: 10px;"></span>
+          </div>
+        </form>
+      </div>
 
-        <div class="actions">
-          <button id="submitBtn" class="btn btn--primary" type="submit">Subir y procesar</button>
-          <span id="statusText" class="muted small" style="margin-left: 10px;"></span>
-        </div>
-      </form>
+      <!-- PANEL: ZIP -->
+      <div id="panelZip" class="tab-panel" role="tabpanel" aria-labelledby="tabBtnZip" style="margin-top: 18px; display:none;">
+        <h2 class="h2">Subir ZIP de imágenes</h2>
+        <p class="muted">
+          Sube un ZIP con fotos. Se sube a <span class="code">tmp/zips</span> y el Job descomprime e ingesta en
+          <span class="code">raw/images/&lt;source_type&gt;/&lt;dataset_name&gt;/&lt;timestamp&gt;/&lt;image_uid&gt;.&lt;ext&gt;</span>.
+        </p>
 
-      <div id="notice" class="notice" style="display:none;">
+        <form id="uploadZipForm" class="form">
+          <div class="grid">
+            <div class="field">
+              <label for="zip_source_type">Tipo de fuente</label>
+              <select id="zip_source_type" name="source_type" required>
+                <option value="public">Public</option>
+                <option value="captured">Captured</option>
+                <option value="simulated">Simulated</option>
+              </select>
+              <div class="help">Organiza el destino bajo <span class="code">raw/images</span>.</div>
+            </div>
+
+            <div class="field">
+              <label for="dataset_name">Dataset name</label>
+              <input id="dataset_name" name="dataset_name" placeholder="Ej: nvidia, cityscapes, custom_set..." required />
+              <div class="help">Nombre del dataset (se usa como carpeta en <span class="code">raw/images</span> y como <span class="code">source_name</span> en BigQuery).</div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="zip_file">Archivo ZIP</label>
+            <input id="zip_file" type="file" name="zipfile" accept=".zip,application/zip" required />
+            <div class="help">Incluye solo imágenes (jpg/png/webp). El Job filtrará lo que no sea válido.</div>
+          </div>
+
+          <div class="actions">
+            <button id="zipSubmitBtn" class="btn btn--primary" type="submit">Subir ZIP</button>
+            <span id="zipStatusText" class="muted small" style="margin-left: 10px;"></span>
+          </div>
+        </form>
+      </div>
+
+      <!-- Avisos (compartidos) -->
+      <div id="notice" class="notice" style="display:none; margin-top: 16px;">
         <div id="noticeTitle" class="notice__title"></div>
         <div id="noticeBody" class="notice__body"></div>
       </div>
@@ -72,7 +146,6 @@
     </div>
   </footer>
 
-  <script src="{{ url_for('static', filename='scripts/video_upload.js') }}"></script>
+  <script src="{{ url_for('static', filename='scripts/uploader.js') }}"></script>
 </body>
 </html>
-

@@ -1,12 +1,13 @@
-# **HUD Video Uploader**
+# **HUD Video & Image Uploader**
 
 ![standard-readme compliant](https://img.shields.io/badge/readme%20style-standard-brightgreen.svg?style=flat-square)
 ![license](https://img.shields.io/github/license/VisualRoadLabs/hud-uploader?style=flat-square)
 ![python](https://img.shields.io/badge/python-3.11-blue?style=flat-square)
 ![docker](https://img.shields.io/badge/docker-ready-blue?style=flat-square)
+![cloud-run](https://img.shields.io/badge/google%20cloud-run-blue?style=flat-square)
 
-HUD Video Uploader is a **Cloud Run–native video ingestion platform** designed for road and driving datasets.  
-It provides a clean, auditable pipeline to upload videos, deduplicate them, extract representative frames, and ingest structured metadata into **Google Cloud Storage** and **BigQuery** for AI and computer vision workflows.
+HUD Uploader is a **Cloud Run–native ingestion platform** for road perception datasets.  
+It supports **video uploads** and **image ZIP uploads**, performs deterministic deduplication, extracts metadata and frames, and ingests structured data into **Google Cloud Storage** and **BigQuery** for AI and computer vision workflows.
 
 ## **Table of Contents**
 
@@ -16,6 +17,7 @@ It provides a clean, auditable pipeline to upload videos, deduplicate them, extr
 - [Install](#install)
 - [Usage](#usage)
 - [Deployment](#deployment)
+- [Configuration](#configuration)
 - [API](#api)
 - [License](#license)
 
@@ -27,7 +29,7 @@ This application relies on **Google Application Default Credentials (ADC)**.
 
 ```bash
 gcloud auth application-default login
-```
+````
 
 Credentials are stored locally at:
 
@@ -50,7 +52,7 @@ For production, use a **dedicated Service Account** with least-privilege IAM rol
 
 ## **Architecture**
 
-The final architecture is composed of **two decoupled Cloud Run components**:
+The system is composed of **one Cloud Run Service** and **multiple Cloud Run Jobs**, fully decoupled.
 
 ### **1. Cloud Run Service (Web entrypoint)**
 
@@ -67,44 +69,60 @@ The final architecture is composed of **two decoupled Cloud Run components**:
 
 - Triggers a **Cloud Run Job** with metadata passed as environment variables
 
-### **2. Cloud Run Job (Batch worker)**
+### **2. Cloud Run Jobs (Batch workers)**
+
+#### **Video ingestion job**
 
 - Downloads the staged video from `tmp/videos`
 - Organizes it into:
 
-  ```powershell
+  ```bash
   raw/videos/<source_type>/<provider>/<job_ts>/<video_uid>.<ext>
   ```
 
-- Extracts frames adaptively based on motion and time thresholds
-- Stores frames under:
+- Extracts frames adaptively
+- Stores frames in:
 
-  ```powershell
+  ```bash
   raw/images/<source_type>/<provider>/<job_ts>/<image_uid>.jpg
   ```
 
-- Inserts metadata into BigQuery: `raw__videos`, `raw__images`, `frame__lineage`.
-- Deletes the temporary object in `tmp/videos`
-- Cleans up local `/tmp` storage
+- Inserts metadata into BigQuery: `raw__videos`, `raw__images`
+`frame__lineage`
+- Deletes the temporary staged object
 
-This design:
+#### **Image ZIP ingestion job**
 
-- Fully decouples web traffic from heavy compute
-- Prevents duplicate ingestions
-- Avoids signed URLs and complex IAM setups
-- Scales cleanly and predictably
-- Provides full end-to-end lineage
+- Downloads staged ZIP
+- Validates images
+- Deduplicates using `image_uid`
+- Uploads images to:
+
+  ```bash
+  raw/images/<source_type>/<dataset_name>/<job_ts>/<image_uid>.<ext>
+  ```
+
+- Inserts metadata into `raw__images`
+- Deletes the temporary ZIP
+
+### **Key benefits**
+
+- Clean separation between UI and compute
+- No signed URLs required
+- Deterministic deduplication
+- Fully auditable lineage
+- Scales independently per workload
 
 ## **Background**
 
-Modern road perception pipelines require:
+Road perception pipelines require:
 
-- Reliable ingestion of large video assets
-- Deterministic deduplication
+- Large-scale ingestion of heterogeneous media
+- Strong deduplication guarantees
 - Frame-level traceability
-- Structured metadata storage for ML training and auditing
+- Structured metadata for ML training and audits
 
-HUD Video Uploader provides a production-ready ingestion layer bridging raw video uploads with analytics-ready datasets in GCS and BigQuery.
+HUD Uploader provides a production-ready ingestion layer bridging raw uploads with analytics-ready datasets in GCS and BigQuery.
 
 ## **Install**
 
@@ -154,7 +172,9 @@ docker run --rm -p 8000:8080 `
   -e BQ_TABLE_LINEAGE=frame__lineage `
   -e RUN_REGION=us-central1 `
   -e RUN_JOB_NAME=hud-video-worker `
+  -e RUN_IMAGES_ZIP_JOB_NAME=hud-images-zip-worker `
   -e GCS_TMP_VIDEOS_PREFIX=tmp/videos `
+  -e GCS_TMP_ZIPS_PREFIX=tmp/zips `
   -e GOOGLE_APPLICATION_CREDENTIALS=/tmp/adc/application_default_credentials.json `
   -v "$env:APPDATA\gcloud:/tmp/adc:ro" `
   hud-uploader:local
@@ -187,27 +207,37 @@ docker push gcr.io/braided-torch-459606-c6/hud-uploader:vXXXXXXXX
 
 After pushing a new version:
 
-- Update the **Cloud Run Service** image:
+- Update **Cloud Run Service** image
+- Update **Cloud Run Jobs** image versions
+- Ensure Service Account permissions remain unchanged
 
-  ```bash
-  gcr.io/braided-torch-459606-c6/hud-uploader:vXXXXXXXX
-  ```
+## **Configuration**
 
-- Update the **Cloud Run Job** to use the same (or compatible) image version
+All behavior is controlled via environment variables (12-factor compliant).
 
-This ensures service and worker remain in sync.
+Key variables:
+
+- `RUN_REGION`
+- `RUN_JOB_NAME`
+- `RUN_IMAGES_ZIP_JOB_NAME`
+- `GCS_TMP_VIDEOS_PREFIX`
+- `GCS_TMP_ZIPS_PREFIX`
+- `MIN_FPS`, `MAX_FPS`, `MOTION_THRESHOLD`
+
+Defaults are safe for production and can be overridden.
 
 ## **API**
 
-This project does not expose a public REST API.
+### Endpoints
 
 Available endpoints:
 
 - `GET /` — Upload UI
 - `POST /api/upload-video` — Video upload
+- `POST /api/upload-images-zip` — Image ZIP upload
 - `GET /healthz` — Health check
 
-All configuration is provided via environment variables (12-factor compliant).
+No public REST API is exposed beyond ingestion.
 
 ## **License**
 
