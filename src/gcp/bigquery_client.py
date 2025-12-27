@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 from google.cloud import bigquery
 
@@ -70,3 +70,24 @@ class BigQueryClient:
                 raise RuntimeError(
                     f"BigQuery insert {self.settings.bq_table_lineage} error: {errors}"
                 )
+
+    def images_exist(self, image_uids: List[str]) -> Set[str]:
+        if not image_uids:
+            return set()
+
+        table = self._table_id(self.settings.bq_table_images)
+        q = f"""
+        SELECT image_uid
+        FROM `{table}`
+        WHERE image_uid IN UNNEST(@uids)
+        """
+
+        job = self.client.query(
+            q,
+            job_config=bigquery.QueryJobConfig(
+                query_parameters=[
+                    bigquery.ArrayQueryParameter("uids", "STRING", image_uids)
+                ]
+            ),
+        )
+        return {row["image_uid"] for row in job.result()}
