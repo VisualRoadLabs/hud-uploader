@@ -51,6 +51,7 @@ def create_app() -> Flask:
     # VIDEO UPLOAD
     @app.post("/api/upload-video")
     def api_upload_video():
+        print("[INFO] Received /api/upload-video request")
         if "video" not in request.files:
             return (
                 jsonify({"ok": False, "message": "No se recibió ningún archivo."}),
@@ -70,6 +71,7 @@ def create_app() -> Flask:
         ext = Path(video.filename).suffix.lower() or ".mp4"
 
         # 1) Volcar a /tmp y calcular SHA256 + tamaño
+        print("[INFO] Saving uploaded video to /tmp and calculating SHA256")
         h = hashlib.sha256()
         tmp_dir = "/tmp"
         os.makedirs(tmp_dir, exist_ok=True)
@@ -89,11 +91,14 @@ def create_app() -> Flask:
         video_uid = h.hexdigest()
 
         # 2) Dedupe en BQ (NO subimos si existe)
+        print(f"[INFO] Checking if video {video_uid} already exists in BigQuery")
         try:
             exists = _bq_video_exists(
                 bq_client, settings.bq_dataset, settings.bq_table_videos, video_uid
             )
-        except Exception:
+        except Exception as e:
+            print("[ERROR] Checking video existence in BigQuery failed:", repr(e))
+            traceback.print_exc()
             # Si BQ falla, mejor no subir para evitar duplicados accidentales
             tmp_path.unlink(missing_ok=True)
             return (
@@ -107,6 +112,7 @@ def create_app() -> Flask:
             )
 
         if exists:
+            print(f"[INFO] Video {video_uid} is a duplicate. Aborting upload.")
             tmp_path.unlink(missing_ok=True)
             return (
                 jsonify(
@@ -120,6 +126,7 @@ def create_app() -> Flask:
             )
 
         # 3) Subir a GCS tmp/videos/<sha>.<ext>
+        print(f"[INFO] Uploading video {video_uid} to GCS")
         object_name = f"{settings.gcs_tmp_videos_prefix}/{video_uid}{ext}"
         gcs_uri = f"gs://{settings.gcs_bucket}/{object_name}"
 
@@ -135,6 +142,7 @@ def create_app() -> Flask:
                 )
 
             # 4) Lanzar job (el worker borrará el tmp al final)
+            print(f"[INFO] Launching Cloud Run Job to process video {video_uid}")
             jobs.run_job(
                 job_name=settings.run_job_name,
                 env_overrides={
@@ -148,7 +156,9 @@ def create_app() -> Flask:
 
             return jsonify({"ok": True, "message": "Subido. Procesamiento iniciado."})
 
-        except Exception:
+        except Exception as e:
+            print("[ERROR] upload-video failed:", repr(e))
+            traceback.print_exc()
             return (
                 jsonify(
                     {"ok": False, "message": "Ha ocurrido un error durante el proceso."}
@@ -162,6 +172,7 @@ def create_app() -> Flask:
     # IMAGES ZIP UPLOAD
     @app.post("/api/upload-images-zip")
     def api_upload_images_zip():
+        print("[INFO] Received /api/upload-images-zip request")
         """
         Recibe un ZIP con imágenes, lo sube a tmp/zips/<sha>.zip y lanza un Job
         que lo descomprime y vuelca a raw/images/<source_type>/<dataset_name>/<job_ts>/<image_uid>.<ext>
@@ -189,6 +200,7 @@ def create_app() -> Flask:
             )
 
         # Guardar ZIP en /tmp y calcular sha del zip (para nombre estable)
+        print("[INFO] Saving uploaded ZIP to /tmp and calculating SHA256")
         tmp_dir = "/tmp"
         os.makedirs(tmp_dir, exist_ok=True)
 
@@ -209,6 +221,7 @@ def create_app() -> Flask:
         gcs_uri = f"gs://{settings.gcs_bucket}/{object_name}"
 
         try:
+            print(f"[INFO] Uploading ZIP {zip_sha} to GCS")
             bucket = storage_client.bucket(settings.gcs_bucket)
             blob = bucket.blob(object_name)
 
@@ -220,6 +233,7 @@ def create_app() -> Flask:
                 )
 
             # Lanzar job específico de zip de imágenes
+            print(f"[INFO] Launching Cloud Run Job to process images ZIP {zip_sha}")
             jobs.run_job(
                 job_name=settings.run_images_zip_job_name,
                 env_overrides={
@@ -236,7 +250,9 @@ def create_app() -> Flask:
                 {"ok": True, "message": "Subido. Descompresión e ingesta iniciadas."}
             )
 
-        except Exception:
+        except Exception as e:
+            print("[ERROR] upload-images-zip failed:", repr(e))
+            traceback.print_exc()
             return (
                 jsonify(
                     {"ok": False, "message": "Ha ocurrido un error durante el proceso."}
