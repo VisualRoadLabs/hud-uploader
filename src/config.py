@@ -36,9 +36,11 @@ class Settings:
     # Cloud Run Job (manual trigger)
     run_region: str
     run_job_name: str
+    run_images_zip_job_name: str
 
     # GCS tmp staging
     gcs_tmp_videos_prefix: str
+    gcs_tmp_zips_prefix: str
 
 
 def _get_bool(name: str, default: bool) -> bool:
@@ -49,7 +51,6 @@ def _get_bool(name: str, default: bool) -> bool:
 
 
 def get_settings() -> Settings:
-
     return Settings(
         gcp_project=os.environ.get("GCP_PROJECT"),
         gcs_bucket=os.environ.get("GCS_BUCKET"),
@@ -71,5 +72,9 @@ def get_settings() -> Settings:
         debug=_get_bool("DEBUG", True),
         run_region=os.environ.get("RUN_REGION", "us-central1"),
         run_job_name=os.environ.get("RUN_JOB_NAME", "hud-video-worker"),
+        run_images_zip_job_name=os.environ.get(
+            "RUN_IMAGES_ZIP_JOB_NAME", "hud-images-zip-worker"
+        ),
         gcs_tmp_videos_prefix=os.environ.get("GCS_TMP_VIDEOS_PREFIX", "tmp/videos"),
+        gcs_tmp_zips_prefix=os.environ.get("GCS_TMP_ZIPS_PREFIX", "tmp/zips"),
     )
